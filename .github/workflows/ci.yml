@@ -1,0 +1,31 @@
+name: Mythic Archival Engine CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Ensure Pester is available
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          if (-not (Get-Module -ListAvailable -Name Pester | Where-Object { [version]$_.Version -ge [version]'5.0' })) {
+            Install-Module Pester -Scope CurrentUser -Force -SkipPublisherCheck -AllowClobber
+          }
+
+      - name: Validate module manifest
+        shell: pwsh
+        run: Test-ModuleManifest -Path ./src/MythicArchivalEngine.psd1 -ErrorAction Stop
+
+      - name: Run Pester tests
+        shell: pwsh
+        run: Invoke-Pester -CI -Path ./tests -Output Detailed
